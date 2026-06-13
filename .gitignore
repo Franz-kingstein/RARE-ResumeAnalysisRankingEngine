@@ -1,0 +1,19 @@
+# Virtual Environment
+.venv/
+venv/
+ENV/
+
+# Python Cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Testing Cache
+.pytest_cache/
+.coverage
+htmlcov/
+
+# OS Specific
+.DS_Store
+Thumbs.db

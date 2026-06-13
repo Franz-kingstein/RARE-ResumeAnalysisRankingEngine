@@ -1,0 +1,9 @@
+# Core Data Validation and Parsing
+pydantic>=2.0.0
+
+# Testing Framework
+pytest>=7.0.0
+
+# Reranker AI Pipeline (Optional if running in simulation/mock mode)
+torch>=2.0.0
+FlagEmbedding>=1.2.0
