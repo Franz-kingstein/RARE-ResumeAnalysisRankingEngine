@@ -79,6 +79,27 @@ PYTHONPATH=. pytest ranking_test/
 
 ---
 
+## 🗄 Storage & Retrieval Module
+
+This repository now also includes a simple hackathon-friendly storage layer under `storage/` that:
+
+- accepts candidate text or structured profile payloads
+- generates embeddings with FastEmbed
+- stores candidate vectors and metadata in Qdrant
+- retrieves top matches for a job description
+- returns ranking-ready candidate payloads
+
+### Storage API
+
+- `POST /setup` seeds the Qdrant collection with sample data
+- `POST /ingest` stores a candidate profile
+- `POST /search` returns semantic matches for a job description
+- `GET /resume/<id>` retrieves one stored candidate by ID
+
+The storage module uses the same embedding model for ingestion and retrieval so vectors remain comparable.
+
+---
+
 ## 💻 Integration Code Snippet
 To use the module inside the team's main pipeline script:
 

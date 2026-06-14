@@ -1,5 +1,6 @@
 from typing import Any, List, Optional, Union
-from pydantic import BaseModel, Field, ConfigDict
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 class CandidateInput(BaseModel):
     """
@@ -10,8 +11,15 @@ class CandidateInput(BaseModel):
 
     id: Union[int, str] = Field(description="Unique candidate identifier")
     name: str = Field(description="Candidate's full name")
-    skills: str = Field(description="Comma-separated skills list or skill summary")
+    skills: Union[str, List[str]] = Field(description="Comma-separated skills list, skill summary, or structured skills list")
     resume_text: str = Field(description="Parsed raw or semi-structured resume text")
+
+    @field_validator("skills", mode="before")
+    @classmethod
+    def normalize_skills(cls, value):
+        if isinstance(value, list):
+            return ", ".join(str(item) for item in value)
+        return value
 
 class CandidateRanked(CandidateInput):
     """
