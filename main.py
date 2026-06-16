@@ -11,7 +11,7 @@ def main():
     print(f"[INPUT] Job Description: '{job_desc}'")
 
     # 2. Simulate upstream retrieval (e.g., Vector DB Similarity Search yields these candidates)
-    mock_retrieved_candidates = [
+    retrieved_candidates = [
         {
             "id": 101, 
             "name": "Alice", 
@@ -31,7 +31,7 @@ def main():
             "resume_text": "Backend engineer with experience in Django, PostgreSQL and Docker. Managed some AWS EKS services."
         },
     ]
-    print(f"[INPUT] Retrieved {len(mock_retrieved_candidates)} mock candidates from Vector DB retrieval step.")
+    print(f"[INPUT] Retrieved {len(retrieved_candidates)} mock candidates from Vector DB retrieval step.")
 
     # 3. Initialize the custom ranking engine
     # (Reads GPU setup and model weights once; automatically falls back to simulation mode if deps are missing)
@@ -43,7 +43,7 @@ def main():
     print("\n[INFO] Running ranking engine...")
     ranked_candidates = reranker.rank_candidates(
         job_description=job_desc,
-        retrieved_candidates=mock_retrieved_candidates,
+        retrieved_candidates=retrieved_candidates,
         cutoff_layer=12
     )
 

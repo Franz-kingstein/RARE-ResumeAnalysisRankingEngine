@@ -32,5 +32,8 @@ class RerankRequest(BaseModel):
     Schema representing a formal request package to rerank a list of candidates.
     """
     job_description: str = Field(description="Job description query text")
-    candidates: List[CandidateInput] = Field(description="List of candidates to rerank")
+    retrieved_candidates: List[CandidateInput] = Field(
+        description="List of candidates already retrieved for reranking",
+        validation_alias="candidates",
+    )
     cutoff_layer: Optional[int] = Field(default=12, description="Model early exit layer cutoff")
