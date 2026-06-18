@@ -1,4 +1,8 @@
 flask==2.3.0
 qdrant-client==2.7.0
+<<<<<<< HEAD
 fastembed==0.4.1
+=======
+sentence-transformers==2.2.2
+>>>>>>> ec0d2d8042578e9c3881e2db42a9d82e59f07708
 python-dotenv==1.0.0
