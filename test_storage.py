@@ -11,16 +11,7 @@ class StorageTests(unittest.TestCase):
     @patch("storage.qdrant_setup.QdrantClient")
     @patch("storage.qdrant_setup.TextEmbedding")
     @patch("storage.qdrant_setup.UnexpectedResponse", new=Exception)
-    @patch("storage.qdrant_setup.SAMPLE_RESUMES", [
-        {
-            "id": 1,
-            "name": "Alice",
-            "content": "Python developer",
-            "skills": ["Python"],
-            "experience": 3,
-        }
-    ])
-    def test_setup_qdrant_creates_collection_and_loads_points(self, mock_embedding_class, mock_client_class):
+    def test_setup_qdrant_creates_collection(self, mock_embedding_class, mock_client_class):
         mock_client = MagicMock()
         mock_client.get_collection.side_effect = Exception("missing")
         mock_client_class.return_value = mock_client
@@ -32,7 +23,6 @@ class StorageTests(unittest.TestCase):
         setup_qdrant(collection_name="resumes-test", host="localhost", port=6333)
 
         mock_client.create_collection.assert_called_once()
-        mock_client.upsert.assert_called_once()
 
     @patch("storage.retrieval.QdrantClient")
     @patch("storage.retrieval.TextEmbedding")

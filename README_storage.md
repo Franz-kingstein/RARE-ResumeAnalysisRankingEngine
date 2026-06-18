@@ -21,9 +21,8 @@ This module provides the storage and retrieval layer for a resume ranking pipeli
 storage/
 ├── __init__.py           # Exposes public API (setup_qdrant, ResumeRetriever)
 ├── config.py             # Configuration (Qdrant host, port, collection name, embedding model)
-├── qdrant_setup.py       # Initializes Qdrant collection and loads sample resumes
-├── retrieval.py          # Core logic: search, ingest, fetch, and ranking
-└── sample_resumes.py     # Sample candidate data for seeding
+├── qdrant_setup.py       # Initializes empty Qdrant collection
+└── retrieval.py          # Core logic: search, ingest, fetch, and ranking
 
 app.py                     # Flask API endpoints (optional, for HTTP interface)
 test_storage.py           # Unit tests for storage and retrieval
@@ -60,9 +59,11 @@ Or follow the [Qdrant documentation](https://qdrant.tech/documentation/quick-sta
 ```python
 from storage import setup_qdrant
 
-setup_qdrant()  # Creates collection and loads sample resumes
-print("✓ Qdrant collection initialized with sample resumes")
+setup_qdrant()  # Creates empty collection
+print("✓ Qdrant collection initialized")
 ```
+
+After initialization, ingest candidates using the `ResumeRetriever.ingest_candidate()` method or via the `/ingest` Flask endpoint.
 
 ---
 
@@ -91,14 +92,16 @@ for candidate in results:
 
 ### API Reference
 
-#### `setup_qdrant(collection_name=None, host=None, port=None)`
-
-Initializes the Qdrant collection and seeds it with sample resumes.
+#### `setup_an empty Qdrant collection with the correct vector dimensions.
 
 **Parameters:**
 - `collection_name`: Collection name (default: `"resumes"` from config)
 - `host`: Qdrant host (default: `"localhost"` from config)
 - `port`: Qdrant port (default: `6333` from config)
+
+**Returns:** Qdrant client instance
+
+**Note:** This function creates an empty collection. Candidates are ingested via `ResumeRetriever.ingest_candidate()` or the Flask `/ingest` endpoint.33` from config)
 
 **Returns:** Qdrant client instance
 
@@ -228,7 +231,7 @@ python -m pytest test_storage.py -v
 Or with unittest:
 
 ```bash
-python -m unittest test_storage.py
+python -m unittest test_storage.py`: Verifies collection creation
 ```
 
 **Test Coverage:**
