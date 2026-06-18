@@ -1,7 +1,8 @@
 """Setup script for Qdrant vector database."""
 
 from qdrant_client import QdrantClient
-from qdrant_client.models import Distance, PointStruct, VectorParams
+from qdrant_client.http.exceptions import UnexpectedResponse
+from qdrant_client.models import Distance, VectorParams
 from fastembed import TextEmbedding
 
 from storage.config import (
@@ -10,7 +11,6 @@ from storage.config import (
     QDRANT_HOST,
     QDRANT_PORT,
 )
-from storage.sample_resumes import SAMPLE_RESUMES
 
 
 def setup_qdrant(
@@ -18,14 +18,14 @@ def setup_qdrant(
     host=QDRANT_HOST,
     port=QDRANT_PORT,
 ):
-    """Initialize Qdrant collection and load sample resumes."""
+    """Initialize Qdrant collection (creates empty collection)."""
     client = QdrantClient(host=host, port=port)
     model = TextEmbedding(model_name=EMBEDDING_MODEL_NAME)
 
     try:
         client.get_collection(collection_name=collection_name)
         collection_exists = True
-    except Exception:
+    except UnexpectedResponse:
         collection_exists = False
 
     if not collection_exists:
@@ -40,36 +40,10 @@ def setup_qdrant(
             ),
         )
 
-        print(f"Created collection: {collection_name}")
+        print(f"✓ Created collection: {collection_name}")
     else:
-        print(f"Collection already exists: {collection_name}")
+        print(f"✓ Collection already exists: {collection_name}")
 
-    points = []
-    for resume in SAMPLE_RESUMES:
-        embedding = list(model.embed([resume["content"]]))[0].tolist()
-
-        payload = {
-            "candidate_id": resume["id"],
-            "name": resume["name"],
-            "resume_text": resume["content"],
-        }
-
-        if "skills" in resume:
-            payload["skills"] = resume["skills"]
-
-        if "experience" in resume:
-            payload["experience"] = resume["experience"]
-
-        points.append(
-            PointStruct(
-                id=resume["id"],
-                vector=embedding,
-                payload=payload,
-            )
-        )
-
-    client.upsert(collection_name=collection_name, points=points)
-    print(f"Loaded {len(points)} resumes into Qdrant")
     return client
 
 
