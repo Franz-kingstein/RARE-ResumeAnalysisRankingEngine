@@ -93,9 +93,9 @@ def show_candidate(
     print(f"  Min/Max:  [{vec.min():.6f}, {vec.max():.6f}]")
     print(f"  Mean:     {vec.mean():.6f}")
     print(f"  Std:      {vec.std():.6f}")
-    print(f"\n  First 20 values:")
+    print("\n  First 20 values:")
     print(f"  {vec[:20]}")
-    print(f"\n  Last 10 values:")
+    print("\n  Last 10 values:")
     print(f"  {vec[-10:]}")
 
 
@@ -153,7 +153,7 @@ def top_pairs(
     print(f"{'Rank':<6} {'Candidate A':<18} {'Candidate B':<18} {'Similarity':<12}")
     print("-" * 54)
 
-    for rank, (r, c) in enumerate(zip(rows, cols), 1):
+    for rank, (r, c) in enumerate(zip(rows, cols, strict=True), 1):
         print(f"{rank:<6} {candidate_ids[r]:<18} {candidate_ids[c]:<18} {sim_matrix[r, c]:.6f}")
 
 

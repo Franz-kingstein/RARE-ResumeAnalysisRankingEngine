@@ -1,13 +1,26 @@
-"""Structured text builder for candidate profiles.
+"""Text building, embedding generation, and normalization.
 
-Converts a CandidateProfile into a section-based text representation
-optimized for dense embedding with BAAI/bge-small-en-v1.5.
-
-Section ordering prioritizes the most semantically dense fields first,
-since transformer models attend most heavily to early tokens.
+Merges the following original modules into a single file:
+- formatter/text_builder.py    — candidate_to_text + section builders
+- embedding/embedder.py        — generate_embeddings + model cache
+- embedding/normalizer.py      — l2_normalize + validate_embeddings
 """
 
-from resume_embedding.parser.candidate_parser import CandidateProfile
+import logging
+from collections.abc import Iterator
+
+import numpy as np
+from fastembed import TextEmbedding
+
+from resume_embedding.app.config import DEFAULT_SETTINGS
+from resume_embedding.app.io import CandidateProfile
+
+logger = logging.getLogger(__name__)
+
+
+# ══════════════════════════════════════════════════════════════════
+# Text Builder (from formatter/text_builder.py)
+# ══════════════════════════════════════════════════════════════════
 
 
 def _build_current_title_section(profile: CandidateProfile) -> str:
@@ -285,3 +298,182 @@ def candidate_to_text(candidate: CandidateProfile) -> str:
             sections.append(section)
 
     return "\n\n".join(sections)
+
+
+# ══════════════════════════════════════════════════════════════════
+# Embedding Generation (from embedding/embedder.py)
+# ══════════════════════════════════════════════════════════════════
+
+# Module-level model cache to avoid re-loading the model on every call.
+_model_cache: dict[str, TextEmbedding] = {}
+
+
+def _get_model(model_name: str) -> TextEmbedding:
+    """Get or create a cached TextEmbedding model instance.
+
+    Args:
+        model_name: HuggingFace model identifier.
+
+    Returns:
+        A TextEmbedding instance ready for inference.
+    """
+    if model_name not in _model_cache:
+        logger.info("Loading embedding model: %s", model_name)
+        _model_cache[model_name] = TextEmbedding(model_name=model_name)
+        logger.info("Model loaded successfully: %s", model_name)
+    return _model_cache[model_name]
+
+
+def generate_embeddings(
+    texts: list[str],
+    *,
+    model_name: str = DEFAULT_SETTINGS.model_name,
+    batch_size: int = DEFAULT_SETTINGS.default_batch_size,
+    device: str = "cpu",
+) -> np.ndarray:
+    """Generate dense vector embeddings for a batch of texts.
+
+    Uses FastEmbed's ONNX-based inference. The model is cached after first load.
+    The ``device`` parameter is logged for metadata tracking; FastEmbed
+    automatically uses CUDAExecutionProvider when ``onnxruntime-gpu`` is installed.
+
+    Args:
+        texts: List of text strings to embed.
+        model_name: HuggingFace model identifier.
+        batch_size: Number of texts to process per inference batch.
+        device: Compute device indicator ('cuda' or 'cpu'). Used for logging
+            and metadata. FastEmbed handles provider selection internally.
+
+    Returns:
+        NumPy array of shape (len(texts), 384) with float32 embeddings.
+
+    Raises:
+        ValueError: If texts is empty.
+    """
+    if not texts:
+        raise ValueError("Cannot generate embeddings for an empty text list.")
+
+    model = _get_model(model_name)
+
+    logger.debug("Generating embeddings for %d texts on device=%s", len(texts), device)
+
+    embeddings_iter: Iterator[np.ndarray] = model.embed(
+        texts,
+        batch_size=batch_size,
+    )
+
+    embeddings_list = list(embeddings_iter)
+    result = np.array(embeddings_list, dtype=np.float32)
+
+    logger.debug(
+        "Generated embeddings: shape=%s, dtype=%s",
+        result.shape,
+        result.dtype,
+    )
+    return result
+
+
+# ══════════════════════════════════════════════════════════════════
+# L2 Normalization & Validation (from embedding/normalizer.py)
+# ══════════════════════════════════════════════════════════════════
+
+
+def l2_normalize(vectors: np.ndarray) -> np.ndarray:
+    """Normalize each row vector to unit L2 norm.
+
+    Handles zero-norm vectors gracefully by leaving them as zero vectors.
+
+    Args:
+        vectors: NumPy array of shape (N, D) with float32 values.
+
+    Returns:
+        NumPy array of same shape with each row having L2 norm == 1.0
+        (except zero vectors, which remain zero).
+
+    Raises:
+        ValueError: If input is not a 2D array.
+    """
+    if vectors.ndim != 2:
+        raise ValueError(
+            f"Expected 2D array, got {vectors.ndim}D array with shape {vectors.shape}"
+        )
+
+    norms = np.linalg.norm(vectors, axis=1, keepdims=True)
+
+    # Avoid division by zero for zero-norm vectors.
+    safe_norms = np.where(norms == 0, 1.0, norms)
+    normalized = vectors / safe_norms
+
+    # Ensure float32 output.
+    normalized = normalized.astype(np.float32)
+
+    logger.debug(
+        "Normalized %d vectors. Min norm: %.6f, Max norm: %.6f",
+        vectors.shape[0],
+        float(np.min(norms)),
+        float(np.max(norms)),
+    )
+    return normalized
+
+
+def validate_embeddings(
+    vectors: np.ndarray,
+    *,
+    dimension: int = DEFAULT_SETTINGS.vector_dimension,
+    tolerance: float = DEFAULT_SETTINGS.norm_tolerance,
+) -> bool:
+    """Validate that embeddings meet dimensional and normalization requirements.
+
+    Checks:
+    1. Shape is (N, dimension) where dimension defaults to 384.
+    2. Data type is float32.
+    3. Every row vector has L2 norm within tolerance of 1.0.
+
+    Args:
+        vectors: NumPy array to validate.
+        dimension: Expected embedding dimensionality (default: 384).
+        tolerance: Allowed deviation from unit norm (default: 1e-5).
+
+    Returns:
+        True if all validations pass.
+
+    Raises:
+        ValueError: If any validation check fails, with a descriptive message.
+    """
+    # Check dimensionality.
+    if vectors.ndim != 2:
+        raise ValueError(
+            f"Expected 2D array, got {vectors.ndim}D with shape {vectors.shape}"
+        )
+
+    if vectors.shape[1] != dimension:
+        raise ValueError(
+            f"Expected dimension {dimension}, got {vectors.shape[1]}. "
+            f"Shape: {vectors.shape}"
+        )
+
+    # Check dtype.
+    if vectors.dtype != np.float32:
+        raise ValueError(
+            f"Expected float32, got {vectors.dtype}"
+        )
+
+    # Check L2 norms.
+    norms = np.linalg.norm(vectors, axis=1)
+    non_unit = np.abs(norms - 1.0) > tolerance
+    non_unit_count = int(np.sum(non_unit))
+
+    if non_unit_count > 0:
+        worst_idx = int(np.argmax(np.abs(norms - 1.0)))
+        worst_norm = float(norms[worst_idx])
+        raise ValueError(
+            f"{non_unit_count} vectors are not L2-normalized (tolerance={tolerance}). "
+            f"Worst: index={worst_idx}, norm={worst_norm:.8f}"
+        )
+
+    logger.info(
+        "Validation passed: %d vectors, dimension=%d, all L2-normalized.",
+        vectors.shape[0],
+        dimension,
+    )
+    return True

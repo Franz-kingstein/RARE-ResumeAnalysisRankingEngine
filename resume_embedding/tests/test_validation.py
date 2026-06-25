@@ -12,10 +12,9 @@ import tempfile
 from pathlib import Path
 
 import numpy as np
-import pytest
 
-from resume_embedding.embedding.normalizer import l2_normalize, validate_embeddings
-from resume_embedding.pipeline.embedding_pipeline import run_pipeline
+from resume_embedding.app.model import validate_embeddings
+from resume_embedding.app.pipeline import run_pipeline
 
 
 def _make_test_jsonl(n: int) -> Path:

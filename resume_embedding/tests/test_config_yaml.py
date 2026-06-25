@@ -5,8 +5,9 @@ from pathlib import Path
 
 import pytest
 import yaml
+from pydantic import ValidationError
 
-from resume_embedding.config.settings import PipelineSettings
+from resume_embedding.app.config import PipelineSettings
 
 
 @pytest.fixture
@@ -130,5 +131,5 @@ class TestDeviceResolution:
     def test_frozen_model(self) -> None:
         """Settings should be immutable."""
         settings = PipelineSettings()
-        with pytest.raises(Exception):
+        with pytest.raises(ValidationError):
             settings.model_name = "other-model"

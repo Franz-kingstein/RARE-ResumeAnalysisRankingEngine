@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from resume_embedding.embedding.embedder import generate_embeddings
+from resume_embedding.app.model import generate_embeddings
 
 
 class TestGenerateEmbeddings:

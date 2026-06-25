@@ -3,7 +3,7 @@
 import json
 from pathlib import Path
 
-from resume_embedding.storage.metadata_writer import write_metadata
+from resume_embedding.app.io import write_metadata
 
 
 class TestWriteMetadata:
@@ -32,7 +32,7 @@ class TestWriteMetadata:
             device="cuda",
             input_file="/path/to/data.jsonl",
         )
-        with open(tmp_output_dir / "metadata.json", "r") as fh:
+        with open(tmp_output_dir / "metadata.json") as fh:
             data = json.load(fh)
 
         assert data["model"] == "BAAI/bge-small-en-v1.5"
@@ -64,7 +64,7 @@ class TestWriteMetadata:
             normalized=True,
             records_processed=50,
         )
-        with open(tmp_output_dir / "metadata.json", "r") as fh:
+        with open(tmp_output_dir / "metadata.json") as fh:
             data = json.load(fh)
         expected_keys = {"model", "dimension", "normalized", "records_processed",
                          "device", "input_file", "timestamp"}

@@ -7,8 +7,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from resume_embedding.pipeline.embedding_pipeline import run_pipeline
-from resume_embedding.config.settings import PipelineSettings
+from resume_embedding.app.pipeline import run_pipeline
 
 
 def _create_test_jsonl(num_candidates: int) -> Path:
@@ -180,7 +179,7 @@ class TestPipelineIntegration:
 
         run_pipeline(input_path=jsonl_path, output_path=output_dir)
 
-        with open(output_dir / "metadata.json", "r") as fh:
+        with open(output_dir / "metadata.json") as fh:
             metadata = json.load(fh)
 
         assert metadata["model"] == "BAAI/bge-small-en-v1.5"

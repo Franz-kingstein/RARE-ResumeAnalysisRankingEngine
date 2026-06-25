@@ -1,58 +1,68 @@
 """Embedding pipeline orchestrator.
 
-Coordinates the full pipeline: JSONL streaming → parsing → text building
+Coordinates the full pipeline: input dispatch → text extraction
 → batch embedding → L2 normalization → checkpoint → NPY storage → metadata.
 
 Supports:
-- Direct JSONL file input (no hardcoded paths)
+- All input formats via the input dispatcher (JSONL, JSON, PDF, image, markdown, text)
 - Batch checkpointing with crash recovery (--resume)
 - Device awareness (auto/cuda/cpu)
 - File logging to outputs/logs/
 
 Designed for memory efficiency with 100,000+ candidate datasets.
+
+The embedding model, vector dimension, normalization, and output format
+are identical regardless of which input format is supplied.
 """
 
 import logging
 import time
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 
 import numpy as np
 from tqdm import tqdm
 
-from resume_embedding.config.settings import PipelineSettings, DEFAULT_SETTINGS
-from resume_embedding.embedding.embedder import generate_embeddings
-from resume_embedding.embedding.normalizer import l2_normalize, validate_embeddings
-from resume_embedding.formatter.text_builder import candidate_to_text
-from resume_embedding.parser.candidate_parser import load_candidates
-from resume_embedding.pipeline.checkpoint import CheckpointManager
-from resume_embedding.storage.metadata_writer import write_metadata
-from resume_embedding.storage.npy_writer import save_embeddings
+from resume_embedding.app.config import DEFAULT_SETTINGS, PipelineSettings
+from resume_embedding.app.input import detect_input_type, dispatch
+from resume_embedding.app.io import CheckpointManager, save_embeddings, write_metadata
+from resume_embedding.app.model import generate_embeddings, l2_normalize, validate_embeddings
 
 logger = logging.getLogger(__name__)
 
 
 def _count_records(file_path: Path) -> int:
-    """Count records in a JSONL or JSON file for progress bar estimation.
+    """Estimate the number of records in the input file for progress bar display.
+
+    For JSONL: counts non-empty lines.
+    For JSON: loads and counts array elements.
+    For all other formats (PDF, image, markdown, text): returns 1,
+        since each file produces exactly one (candidate_id, text) tuple.
 
     Args:
-        file_path: Path to the input file (.jsonl or .json).
+        file_path: Path to the input file (any supported format).
 
     Returns:
-        Number of records in the file.
+        Estimated record count (always >= 1).
     """
-    if file_path.suffix.lower() == ".json":
+    ext = file_path.suffix.lower()
+
+    if ext == ".json":
         import orjson
         data = orjson.loads(file_path.read_bytes())
         return len(data) if isinstance(data, list) else 1
 
-    # JSONL: count non-empty lines.
-    count = 0
-    with open(file_path, "rb") as fh:
-        for line in fh:
-            if line.strip():
-                count += 1
-    return count
+    if ext == ".jsonl":
+        # Count non-empty lines.
+        count = 0
+        with open(file_path, "rb") as fh:
+            for line in fh:
+                if line.strip():
+                    count += 1
+        return count
+
+    # PDF, image, markdown, text — each file → one record.
+    return 1
 
 
 def _setup_file_logging(output_dir: Path) -> logging.FileHandler:
@@ -69,7 +79,7 @@ def _setup_file_logging(output_dir: Path) -> logging.FileHandler:
     log_dir = output_dir / "logs"
     log_dir.mkdir(parents=True, exist_ok=True)
 
-    timestamp = datetime.now(tz=timezone.utc).strftime("%Y%m%d_%H%M%S")
+    timestamp = datetime.now(tz=UTC).strftime("%Y%m%d_%H%M%S")
     log_path = log_dir / f"run_{timestamp}.log"
 
     handler = logging.FileHandler(log_path, encoding="utf-8")
@@ -96,19 +106,28 @@ def run_pipeline(
 ) -> dict[str, object]:
     """Execute the full embedding generation pipeline.
 
-    Streams candidate records from a JSONL file, converts to structured text,
-    generates embeddings in batches, normalizes, checkpoints, and writes to
-    .npy files.
+    Accepts any supported input format. The format is auto-detected from
+    the file extension. All formats produce identical 384-dimensional
+    L2-normalized float32 embeddings stored in the same .npy output layout.
+
+    Supported input formats:
+        .jsonl  — Streamed structured candidate records (Pydantic-validated)
+        .json   — Structured candidate records array (Pydantic-validated)
+        .pdf    — PDF resume documents (requires PyMuPDF)
+        .png .jpg .jpeg .bmp .tiff — Resume images (requires pytesseract + Pillow)
+        .md     — Markdown resume files
+        .txt    — Plain text resume files
 
     Args:
-        input_path: Path to the candidates JSONL file.
+        input_path: Path to the input file (any supported format).
         output_path: Directory for output artifacts.
-            Falls back to ``./outputs`` if None.
+            Falls back to ``./data/output/run_<timestamp>`` if None.
         batch_size: Embedding batch size.
             Falls back to ``settings.default_batch_size`` if None.
         device: Compute device ('auto', 'cuda', 'cpu').
             Falls back to ``settings.device`` if None.
         resume: If True, resume from the last checkpoint in ``output_path``.
+            Only valid for JSONL/JSON inputs (structured formats).
         settings: Pipeline configuration. Uses DEFAULT_SETTINGS if None.
 
     Returns:
@@ -123,8 +142,10 @@ def run_pipeline(
             }
 
     Raises:
-        FileNotFoundError: If the JSONL file does not exist.
-        ValueError: If validation fails after embedding or no candidates are found.
+        FileNotFoundError: If the input file does not exist.
+        ValueError: If the file extension is unsupported, validation fails
+            after embedding, or no candidates are found.
+        ImportError: If an optional format dependency is missing.
     """
     if settings is None:
         settings = DEFAULT_SETTINGS
@@ -137,8 +158,8 @@ def run_pipeline(
     if output_path:
         resolved_output = Path(output_path)
     else:
-        timestamp = datetime.now(tz=timezone.utc).strftime("%Y%m%d_%H%M%S")
-        resolved_output = Path("./outputs") / f"run_{timestamp}"
+        timestamp = datetime.now(tz=UTC).strftime("%Y%m%d_%H%M%S")
+        resolved_output = Path("./data/output") / f"run_{timestamp}"
 
     # Resolve auto device.
     if resolved_device == "auto":
@@ -180,10 +201,12 @@ def run_pipeline(
     if not resolved_input.exists():
         raise FileNotFoundError(f"Input file not found: {resolved_input}")
 
+    input_fmt = detect_input_type(resolved_input)
     logger.info("=" * 60)
     logger.info("RESUME EMBEDDING PIPELINE")
     logger.info("=" * 60)
     logger.info("Input:      %s", resolved_input)
+    logger.info("Format:     %s", input_fmt)
     logger.info("Output:     %s", resolved_output)
     logger.info("Model:      %s", settings.model_name)
     logger.info("Dimension:  %d", settings.vector_dimension)
@@ -196,36 +219,36 @@ def run_pipeline(
 
     start_time = time.perf_counter()
 
-    # Phase 1: Count lines for progress estimation.
+    # Phase 1: Estimate record count for progress bar.
     logger.info("Counting records...")
     total_records = _count_records(resolved_input)
-    logger.info("Found %d records in %s", total_records, resolved_input.name)
+    logger.info("Found %d record(s) in %s", total_records, resolved_input.name)
 
-    # Phase 2: Stream, parse, build text, embed in batches.
+    # Phase 2: Dispatch → extract text → embed in batches.
+    # dispatch() yields (candidate_id, text) tuples for any supported format.
     text_batch: list[str] = []
     id_batch: list[str] = []
     processed = len(all_candidate_ids)
     records_seen = 0
 
-    candidates = load_candidates(resolved_input, skip_invalid=True)
+    records = dispatch(resolved_input, skip_invalid=True)
     progress = tqdm(
-        candidates,
+        records,
         total=total_records,
         desc="Processing candidates",
         unit="candidate",
         initial=skip_records,
     )
 
-    for candidate in progress:
+    for candidate_id, text in progress:
         records_seen += 1
 
         # Skip already-checkpointed records.
         if records_seen <= skip_records:
             continue
 
-        text = candidate_to_text(candidate)
         text_batch.append(text)
-        id_batch.append(candidate.candidate_id)
+        id_batch.append(candidate_id)
 
         if len(text_batch) >= resolved_batch_size:
             batch_count += 1

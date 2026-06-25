@@ -16,11 +16,7 @@ import sys
 import tempfile
 from pathlib import Path
 
-# Ensure the project root is on sys.path when run as a script.
-_PROJECT_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(_PROJECT_ROOT / "src"))
-
-from resume_embedding.pipeline.embedding_pipeline import run_pipeline
+from resume_embedding.app.pipeline import run_pipeline
 
 
 def _generate_synthetic_jsonl(num_candidates: int, output_path: Path) -> Path:

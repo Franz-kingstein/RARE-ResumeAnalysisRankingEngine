@@ -5,7 +5,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from resume_embedding.storage.npy_writer import save_embeddings, load_embeddings
+from resume_embedding.app.io import load_embeddings, save_embeddings
 
 
 class TestSaveEmbeddings:

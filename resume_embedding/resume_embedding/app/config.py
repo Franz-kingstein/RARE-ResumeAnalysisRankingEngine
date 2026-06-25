@@ -103,7 +103,7 @@ class PipelineSettings(BaseModel):
         if not config_path.exists():
             raise FileNotFoundError(f"Config file not found: {config_path}")
 
-        with open(config_path, "r", encoding="utf-8") as fh:
+        with open(config_path, encoding="utf-8") as fh:
             yaml_data = yaml.safe_load(fh) or {}
 
         # Apply non-None overrides on top of YAML values.
@@ -115,7 +115,7 @@ class PipelineSettings(BaseModel):
 
 
 # Path to the bundled default config.
-_DEFAULT_CONFIG_PATH = Path(__file__).resolve().parents[3] / "configs" / "default.yaml"
+_DEFAULT_CONFIG_PATH = Path(__file__).resolve().parents[2] / "configs" / "default.yaml"
 
 # Module-level default instance for convenience.
 if _DEFAULT_CONFIG_PATH.exists():

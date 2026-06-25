@@ -22,12 +22,6 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 
-[project.urls]
-Homepage = "https://github.com/<your-username>/resume-embedding-engine"
-Repository = "https://github.com/<your-username>/resume-embedding-engine"
-Issues = "https://github.com/<your-username>/resume-embedding-engine/issues"
-Changelog = "https://github.com/<your-username>/resume-embedding-engine/blob/main/CHANGELOG.md"
-
 dependencies = [
     "fastembed>=0.4.0",
     "numpy>=1.26.0",
@@ -37,9 +31,27 @@ dependencies = [
     "tqdm>=4.66.0",
 ]
 
+[project.urls]
+Homepage = "https://github.com/<your-username>/resume-embedding-engine"
+Repository = "https://github.com/<your-username>/resume-embedding-engine"
+Issues = "https://github.com/<your-username>/resume-embedding-engine/issues"
+Changelog = "https://github.com/<your-username>/resume-embedding-engine/blob/main/CHANGELOG.md"
+
 [project.optional-dependencies]
 gpu = [
     "onnxruntime-gpu>=1.17.0",
+]
+pdf = [
+    "pymupdf>=1.24.0",
+]
+ocr = [
+    "pytesseract>=0.3.10",
+    "Pillow>=10.0.0",
+]
+all-formats = [
+    "pymupdf>=1.24.0",
+    "pytesseract>=0.3.10",
+    "Pillow>=10.0.0",
 ]
 dev = [
     "pytest>=8.0.0",
@@ -47,15 +59,15 @@ dev = [
 ]
 
 [project.scripts]
-resume-embed = "resume_embedding.main:main"
+resume-embed = "resume_embedding.app.main:main"
 
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ["."]
 
 [tool.ruff]
 target-version = "py311"
 line-length = 120
-src = ["src", "tests"]
+src = ["resume_embedding", "tests"]
 
 [tool.ruff.lint]
 select = [
@@ -75,5 +87,5 @@ known-first-party = ["resume_embedding"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["src"]
+pythonpath = ["."]
 addopts = "-v --tb=short"

@@ -14,9 +14,11 @@ build/
 
 # Outputs (generated embeddings — each run creates a timestamped dir)
 outputs/
+data/output/
 
-# User datasets (not committed — use datasets/sample/ for testing)
+# User datasets (not committed — use data/sample/ for testing)
 datasets/input/*.jsonl
+data/input/*.jsonl
 
 # Models cache (downloaded by FastEmbed on first run)
 models/

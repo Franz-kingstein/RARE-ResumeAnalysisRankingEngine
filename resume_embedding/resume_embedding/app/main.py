@@ -1,9 +1,13 @@
 """CLI entry point for the resume embedding pipeline.
 
 Usage:
-    python -m resume_embedding.main --input datasets/sample/sample_candidates.jsonl
-    python -m resume_embedding.main --input data.jsonl --output outputs/ --device cuda
-    python -m resume_embedding.main --resume --output outputs/
+    python -m resume_embedding.main --input data/sample/sample_candidates.jsonl
+    python -m resume_embedding.main --input resume.pdf
+    python -m resume_embedding.main --input resume.png
+    python -m resume_embedding.main --input resume.md
+    python -m resume_embedding.main --input resume.txt
+    python -m resume_embedding.main --input data.jsonl --output data/output/ --device cuda
+    python -m resume_embedding.main --resume --output data/output/
     resume-embed --input data.jsonl --device cuda --verbose
 """
 
@@ -12,8 +16,8 @@ import logging
 import sys
 from pathlib import Path
 
-from resume_embedding.config.settings import PipelineSettings, DEFAULT_SETTINGS
-from resume_embedding.pipeline.embedding_pipeline import run_pipeline
+from resume_embedding.app.config import DEFAULT_SETTINGS, PipelineSettings
+from resume_embedding.app.pipeline import run_pipeline
 
 
 def _configure_logging(verbose: bool = False) -> None:
@@ -43,23 +47,43 @@ def _build_parser() -> argparse.ArgumentParser:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=(
             "Examples:\n"
-            '  resume-embed --input datasets/sample/sample_candidates.jsonl\n'
-            '  resume-embed --input data.jsonl --output outputs/ --device cuda\n'
-            '  resume-embed --resume --output outputs/\n'
-            '  python -m resume_embedding.main --input data.jsonl --batch-size 512 --verbose\n'
+            "  # Structured candidates (JSONL / JSON)\n"
+            "  resume-embed --input data/sample/sample_candidates.jsonl\n"
+            "  resume-embed --input candidates.json --device cuda\n\n"
+            "  # PDF resume\n"
+            "  resume-embed --input resume.pdf --output outputs/pdf_run/\n\n"
+            "  # Image resume (OCR)\n"
+            "  resume-embed --input resume.png\n"
+            "  resume-embed --input scan.tiff\n\n"
+            "  # Markdown / plain text resume\n"
+            "  resume-embed --input resume.md\n"
+            "  resume-embed --input resume.txt\n\n"
+            "  # Advanced\n"
+            "  resume-embed --input data.jsonl --output data/output/ --device cuda\n"
+            "  resume-embed --resume --output data/output/\n"
+            "  python -m resume_embedding.main --input data.jsonl --batch-size 512 --verbose\n"
         ),
     )
     parser.add_argument(
         "--input",
         type=str,
         default=None,
-        help="Path to the input file (.jsonl or .json). Required unless --resume.",
+        help=(
+            "Path to the input file. Supported formats: "
+            ".jsonl (streamed structured records), "
+            ".json (structured records array), "
+            ".pdf (PDF resume — requires PyMuPDF), "
+            ".png/.jpg/.jpeg/.bmp/.tiff (image OCR — requires pytesseract + Pillow), "
+            ".md (markdown resume), "
+            ".txt (plain text resume). "
+            "Required unless --resume is specified."
+        ),
     )
     parser.add_argument(
         "--output",
         type=str,
         default=None,
-        help="Directory for output artifacts (default: auto-generated outputs/run_<timestamp>/).",
+        help="Directory for output artifacts (default: auto-generated data/output/run_<timestamp>/).",
     )
     parser.add_argument(
         "--device",

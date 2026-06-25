@@ -1,13 +1,12 @@
 """Tests for the CheckpointManager."""
 
-import json
 import tempfile
 from pathlib import Path
 
 import numpy as np
 import pytest
 
-from resume_embedding.pipeline.checkpoint import CheckpointManager, CheckpointState
+from resume_embedding.app.io import CheckpointManager
 
 
 @pytest.fixture

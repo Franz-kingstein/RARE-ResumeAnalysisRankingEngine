@@ -6,14 +6,14 @@ from pathlib import Path
 
 import pytest
 
-from resume_embedding.parser.candidate_parser import (
+from resume_embedding.app.io import (
     CandidateProfile,
     CareerEntry,
+    CertificationEntry,
     EducationEntry,
     LanguageEntry,
     ProfileInfo,
     SkillEntry,
-    CertificationEntry,
     load_candidates,
 )
 
@@ -42,7 +42,7 @@ class TestCandidateProfile:
 
     def test_candidate_id_validation(self) -> None:
         """Invalid candidate_id should raise ValidationError."""
-        with pytest.raises(Exception):
+        with pytest.raises(ValueError):
             CandidateProfile.model_validate({
                 "candidate_id": "INVALID_001",
                 "profile": {"anonymized_name": "Test"},
@@ -213,4 +213,3 @@ class TestLoadCandidatesJSON:
 
         with pytest.raises(ValueError, match="Unsupported file extension"):
             list(load_candidates(Path(tmp.name)))
-

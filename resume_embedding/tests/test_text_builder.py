@@ -2,8 +2,8 @@
 
 import pytest
 
-from resume_embedding.formatter.text_builder import candidate_to_text
-from resume_embedding.parser.candidate_parser import CandidateProfile
+from resume_embedding.app.io import CandidateProfile
+from resume_embedding.app.model import candidate_to_text
 
 
 class TestCandidateToText:

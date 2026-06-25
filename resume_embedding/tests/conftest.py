@@ -7,17 +7,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from resume_embedding.parser.candidate_parser import (
-    CandidateProfile,
-    CareerEntry,
-    EducationEntry,
-    LanguageEntry,
-    ProfileInfo,
-    RedrobSignals,
-    SalaryRange,
-    SkillEntry,
-    CertificationEntry,
-)
+from resume_embedding.app.io import CandidateProfile
 
 
 @pytest.fixture

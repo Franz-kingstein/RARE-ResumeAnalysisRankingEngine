@@ -10,12 +10,10 @@ Usage:
 import sys
 from pathlib import Path
 
-# Ensure the project root is on sys.path when run as a script.
-_PROJECT_ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(_PROJECT_ROOT / "src"))
+from resume_embedding.app.pipeline import run_pipeline
 
-from resume_embedding.config.settings import DEFAULT_SETTINGS
-from resume_embedding.pipeline.embedding_pipeline import run_pipeline
+# Resolve project root for locating sample data.
+_PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
 def main() -> None:
@@ -36,17 +34,17 @@ def main() -> None:
         handlers=[logging.StreamHandler(sys.stdout)],
     )
 
-    sample_path = _PROJECT_ROOT / "datasets" / "sample" / "sample_candidates.jsonl"
+    sample_path = _PROJECT_ROOT / "data" / "sample" / "sample_candidates.jsonl"
 
     if not sample_path.exists():
         print(f"ERROR: Sample dataset not found at {sample_path}")
         sys.exit(1)
 
-    # Output will auto-generate a timestamped folder under outputs/.
+    # Output will auto-generate a timestamped folder under data/output/.
     print(f"\n{'='*60}")
     print("SAMPLE RUN — 10 candidates")
     print(f"Input:  {sample_path}")
-    print(f"Output: outputs/run_<timestamp>/ (auto-generated)")
+    print("Output: data/output/run_<timestamp>/ (auto-generated)")
     print(f"{'='*60}\n")
 
     result = run_pipeline(
@@ -54,7 +52,7 @@ def main() -> None:
         device=args.device,
     )
 
-    print(f"\n✓ Processed {result['total_candidates']} candidates in {result['elapsed_seconds']}s")
+    print(f"\nSuccess: Processed {result['total_candidates']} candidates in {result['elapsed_seconds']}s")
     print(f"  Embeddings: {result['embeddings_shape']}")
     print(f"  Device:     {result['device']}")
     print(f"  Output:     {result['output_dir']}")

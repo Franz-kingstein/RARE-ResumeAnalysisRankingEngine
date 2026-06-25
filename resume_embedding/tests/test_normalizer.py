@@ -3,7 +3,7 @@
 import numpy as np
 import pytest
 
-from resume_embedding.embedding.normalizer import l2_normalize, validate_embeddings
+from resume_embedding.app.model import l2_normalize, validate_embeddings
 
 
 class TestL2Normalize:
