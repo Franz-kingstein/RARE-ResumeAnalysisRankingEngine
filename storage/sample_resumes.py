@@ -4,9 +4,9 @@ SAMPLE_RESUMES = [
     {
         "id": 1,
         "name": "Alice Johnson",
-        "content": "Senior Software Engineer with 5 years of experience in Python, JavaScript, and cloud architecture. "
-        "Expertise in microservices, AWS, and Docker. Led team of 4 developers.",
-        "skills": ["Python", "JavaScript", "AWS", "Docker"],
+        "content": "Senior Go Backend Developer with 5 years of experience in Golang, Kubernetes, and cloud architecture. "
+        "Expertise in microservices, AWS, Docker. Built scalable backend systems with Go and Kubernetes.",
+        "skills": ["Go", "Golang", "Kubernetes", "AWS", "Docker"],
         "experience": 5,
     },
     {
