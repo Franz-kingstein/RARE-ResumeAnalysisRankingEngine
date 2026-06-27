@@ -7,7 +7,7 @@ This repository contains the high-performance **Layerwise Candidate Reranking Mo
 ## 📂 Project Directory Structure
 
 ```
-hiring_ai_brain/
+RARE-ResumeAnalysisRankingEngine/
 │
 ├── ranking/                     <-- Core module package
 │   ├── __init__.py              <-- Exposes importable classes and schemas
@@ -17,7 +17,18 @@ hiring_ai_brain/
 ├── ranking_test/                <-- Test suite folder
 │   └── test_layerwise_engine.py <-- pytest mock and validation tests
 │
+├── storage/                     <-- Storage & Retrieval Module
+│   ├── __init__.py
+│   ├── config.py                <-- Configuration (vector/keyword weights)
+│   ├── qdrant_setup.py          <-- Qdrant collection setup
+│   ├── retrieval.py             <-- ResumeRetriever with hybrid search
+│   └── sample_resumes.py        <-- Sample data for testing
+│
+├── app.py                       <-- Flask API for storage endpoints
+├── test_storage.py              <-- Storage module tests
 ├── main.py                      <-- E2E demonstration/integration script
+├── pipeline_integration.py      <-- Integration pipeline script
+├── benchmark_integration.py     <-- Benchmarking script
 ├── requirements.txt             <-- Package dependencies
 └── README.md                    <-- This documentation
 ```
@@ -30,9 +41,9 @@ When presenting or pitching this reranker, highlight these critical engineering 
 
 1. **Decoupled Architecture**: 
    The engine is packaged as an independent Python module (`ranking`). Upstream parsing and vector retrieval logic can change entirely without affecting the reranker. Teammates import the reranker via simple statements:
-   ```python
-   from ranking import LayerwiseCandidateReranker
-   ```
+    ```python
+    from ranking import LayerwiseCandidateReranker
+    ```
 
 2. **VRAM Conservation (GPU Optimization)**:
    By wrapping the reranker in a class, the underlying deep learning model (`BAAI/bge-reranker-v2-minicpm-layerwise`) is initialized **once** during `__init__` and pinned in memory. This prevents memory leaks, fragmentation, and slow startup times caused by re-instantiating heavy weights during active searches.
@@ -71,17 +82,23 @@ Execute the main script to see the reranker process simulated Vector DB results 
 PYTHONPATH=. python3 main.py
 ```
 
-### 4. Run the Automated Test Suite
+### 4. Run the Automated Test Suite (Ranking)
 Run the suite of industry-standard `pytest` unit tests (verifies schema validation, sorting logic, early exit configuration, empty state boundaries, and mocked neural pathways):
 ```bash
 PYTHONPATH=. pytest ranking_test/
+```
+
+### 5. Run Storage Tests
+Run the storage module tests (verifies Qdrant integration, hybrid search, embedding generation):
+```bash
+PYTHONPATH=. pytest test_storage.py -v
 ```
 
 ---
 
 ## 🗄 Storage & Retrieval Module
 
-This repository now also includes a simple hackathon-friendly storage layer under `storage/` that:
+This repository includes a storage layer under `storage/` that:
 
 - accepts candidate text or structured profile payloads
 - generates embeddings with FastEmbed
@@ -93,10 +110,21 @@ This repository now also includes a simple hackathon-friendly storage layer unde
 
 - `POST /setup` seeds the Qdrant collection with sample data
 - `POST /ingest` stores a candidate profile
-- `POST /search` returns semantic matches for a job description
+- `POST /search` returns semantic matches for a job description (supports vector, keyword, and hybrid search)
 - `GET /resume/<id>` retrieves one stored candidate by ID
+- `GET /health` health check endpoint
 
-The storage module uses the same embedding model for ingestion and retrieval so vectors remain comparable.
+### Hybrid Search
+
+The storage module supports three search modes:
+
+| Mode | Description |
+|------|-------------|
+| `vector` | Semantic similarity search using embeddings |
+| `keyword` | Exact keyword matching using indexed payload fields |
+| `hybrid` | Combines semantic and keyword search with configurable weighted ranking (default: 70% vector, 30% keyword) |
+
+See `README_storage.md` for detailed usage examples.
 
 ---
 
