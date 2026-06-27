@@ -132,7 +132,6 @@ resume_embedding/
 ├── pyproject.toml                   # Build config, dependencies, optional extras, ruff/pytest settings
 ├── requirements.txt                 # Pinned dependencies for reproducible installs
 ├── README.md                        # This file
-├── COMMANDS.md                      # Quick-reference command cheat sheet
 ├── LICENSE                          # MIT
 ├── .editorconfig                    # Editor formatting rules
 └── .gitignore                       # Git ignore rules
