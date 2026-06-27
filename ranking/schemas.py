@@ -27,6 +27,32 @@ class CandidateRanked(CandidateInput):
     """
     ai_match_score: float = Field(description="Relevance score computed by the Cross-Encoder model")
 
+class DashboardRequest(BaseModel):
+    query: Optional[str] = Field(default=None, description="Optional job description to filter/rank candidates")
+    top_k: Optional[int] = Field(default=20, description="Number of top candidates to analyze")
+
+class SkillDistribution(BaseModel):
+    skill: str
+    count: int
+
+class ScoreDistribution(BaseModel):
+    range: str
+    label: str
+    count: int
+    percentage: float
+
+class ExperienceDistribution(BaseModel):
+    range: str
+    label: str
+    count: int
+
+class DashboardResponse(BaseModel):
+    query: str
+    total_candidates: int
+    skill_distribution: List[SkillDistribution]
+    score_distribution: List[ScoreDistribution]
+    experience_distribution: List[ExperienceDistribution]
+
 class RerankRequest(BaseModel):
     """
     Schema representing a formal request package to rerank a list of candidates.
