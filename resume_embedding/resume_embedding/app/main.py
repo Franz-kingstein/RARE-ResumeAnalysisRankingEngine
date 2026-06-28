@@ -16,7 +16,7 @@ import logging
 import sys
 from pathlib import Path
 
-from resume_embedding.app.config import DEFAULT_SETTINGS, PipelineSettings
+from resume_embedding.app.config import AVAILABLE_EMBEDDING_MODELS, DEFAULT_SETTINGS, PipelineSettings
 from resume_embedding.app.pipeline import run_pipeline
 
 
@@ -111,12 +111,25 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Path to a YAML config file to override defaults.",
     )
     parser.add_argument(
+        "--list-models",
+        action="store_true",
+        default=False,
+        help="List the embedding model(s) available in this repository and exit.",
+    )
+    parser.add_argument(
         "--verbose",
         action="store_true",
         default=False,
         help="Enable debug logging.",
     )
     return parser
+
+
+def _print_available_models() -> None:
+    """Print the currently available embedding models."""
+    print("Available embedding models:")
+    for model_name in AVAILABLE_EMBEDDING_MODELS:
+        print(f"- {model_name}")
 
 
 def main() -> None:
@@ -127,6 +140,10 @@ def main() -> None:
     """
     parser = _build_parser()
     args = parser.parse_args()
+
+    if args.list_models:
+        _print_available_models()
+        return
 
     _configure_logging(verbose=args.verbose)
 

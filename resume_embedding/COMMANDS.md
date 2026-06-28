@@ -20,6 +20,9 @@ pip install onnxruntime-gpu>=1.17.0    # optional, GPU support
 # Sample data (10 bundled records)
 python scripts/run_sample.py
 
+# List currently available embedding model(s)
+python -m resume_embedding.main --list-models
+
 # JSONL input
 python -m resume_embedding.main --input data/input/candidates.jsonl
 
