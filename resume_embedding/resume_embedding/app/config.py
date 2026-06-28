@@ -15,6 +15,10 @@ from pydantic import BaseModel, Field
 
 logger = logging.getLogger(__name__)
 
+AVAILABLE_EMBEDDING_MODELS: tuple[str, ...] = (
+    "BAAI/bge-small-en-v1.5",
+)
+
 
 class PipelineSettings(BaseModel):
     """Immutable configuration for the embedding pipeline."""
