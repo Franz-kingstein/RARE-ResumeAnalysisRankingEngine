@@ -32,8 +32,8 @@ from collections.abc import Iterator
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from resume_embedding.app.io import _load_json_array, _load_jsonl
-from resume_embedding.app.model import candidate_to_text
+from .io import _load_json_array, _load_jsonl
+from .model import candidate_to_text
 
 if TYPE_CHECKING:
     from PIL import Image

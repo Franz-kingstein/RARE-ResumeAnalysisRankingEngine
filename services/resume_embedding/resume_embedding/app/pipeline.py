@@ -23,10 +23,10 @@ from pathlib import Path
 import numpy as np
 from tqdm import tqdm
 
-from resume_embedding.app.config import DEFAULT_SETTINGS, PipelineSettings
-from resume_embedding.app.input import detect_input_type, dispatch
-from resume_embedding.app.io import CheckpointManager, save_embeddings, write_metadata
-from resume_embedding.app.model import generate_embeddings, l2_normalize, validate_embeddings
+from .config import DEFAULT_SETTINGS, PipelineSettings
+from .input import detect_input_type, dispatch
+from .io import CheckpointManager, save_embeddings, write_metadata
+from .model import generate_embeddings, l2_normalize, validate_embeddings
 
 logger = logging.getLogger(__name__)
 

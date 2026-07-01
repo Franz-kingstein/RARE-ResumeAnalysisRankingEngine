@@ -1,6 +1,6 @@
 """Resume Embedding Pipeline.
 
-This top-level package re-exports from resume_embedding.app
+This top-level package re-exports from .app
 for backward compatibility and programmatic access.
 
 Supported input formats (auto-detected by file extension):
@@ -11,11 +11,11 @@ Supported input formats (auto-detected by file extension):
     .txt           — Plain text resumes
 """
 
-from resume_embedding.app.config import PipelineSettings
-from resume_embedding.app.input import detect_input_type, dispatch
-from resume_embedding.app.io import load_candidates, load_embeddings, save_embeddings
-from resume_embedding.app.model import candidate_to_text, generate_embeddings, l2_normalize
-from resume_embedding.app.pipeline import run_pipeline
+from .app.config import PipelineSettings
+from .app.input import detect_input_type, dispatch
+from .app.io import load_candidates, load_embeddings, save_embeddings
+from .app.model import candidate_to_text, generate_embeddings, l2_normalize
+from .app.pipeline import run_pipeline
 
 __all__ = [
     "run_pipeline",

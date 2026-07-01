@@ -19,7 +19,7 @@ from services.ranking import LayerwiseCandidateReranker
 from services.ranking.schemas import CandidateInput, CandidateRanked
 from services.storage.retrieval import ResumeRetriever
 from services.storage.qdrant_setup import setup_qdrant
-from services.resume_embedding.resume_embedding import run_pipeline
+from services.resume_embedding.resume_embedding.app.pipeline import run_pipeline
 
 app = Flask(__name__)
 

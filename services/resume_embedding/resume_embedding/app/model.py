@@ -12,8 +12,8 @@ from collections.abc import Iterator
 import numpy as np
 from fastembed import TextEmbedding
 
-from resume_embedding.app.config import DEFAULT_SETTINGS
-from resume_embedding.app.io import CandidateProfile
+from .config import DEFAULT_SETTINGS
+from .io import CandidateProfile
 
 logger = logging.getLogger(__name__)
 

@@ -16,8 +16,8 @@ import logging
 import sys
 from pathlib import Path
 
-from resume_embedding.app.config import DEFAULT_SETTINGS, PipelineSettings
-from resume_embedding.app.pipeline import run_pipeline
+from .config import DEFAULT_SETTINGS, PipelineSettings
+from .pipeline import run_pipeline
 
 
 def _configure_logging(verbose: bool = False) -> None:
