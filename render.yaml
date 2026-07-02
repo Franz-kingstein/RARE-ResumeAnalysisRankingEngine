@@ -1,0 +1,30 @@
+services:
+  # Flask Backend Web Service
+  - type: web
+    name: rare-backend
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn main:app
+    envVars:
+      - key: PORT
+        value: 8000
+      - key: PYTHON_VERSION
+        value: 3.12
+
+  # React Frontend Static Site
+  - type: web
+    name: rare-frontend
+    env: static
+    rootDirectory: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    envVars:
+      - key: VITE_API_BASE_URL
+        fromService:
+          type: web
+          name: rare-backend
+          property: host

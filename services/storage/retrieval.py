@@ -117,7 +117,26 @@ class MockResumeRetriever:
         return None
 
     def ingest_candidate(self, candidate: dict) -> dict:
-        raise RuntimeError("Mock mode does not support ingestion")
+        cid = candidate.get("candidate_id") or candidate.get("id")
+        skills_raw = candidate.get("skills", "")
+        skills_list = [s.strip() for s in skills_raw.split(",") if s.strip()] if isinstance(skills_raw, str) else skills_raw
+        
+        # Check if candidate already exists in mock list to avoid duplicates
+        for r in self._candidates:
+            if r["id"] == cid:
+                r["name"] = candidate.get("name", r["name"])
+                r["content"] = candidate.get("resume_text", r["content"])
+                r["skills"] = skills_list
+                return candidate
+                
+        self._candidates.append({
+            "id": cid,
+            "name": candidate.get("name", f"Candidate_{cid}"),
+            "content": candidate.get("resume_text", ""),
+            "skills": skills_list,
+            "experience": [{"role": "Software Engineer", "years": 5}],
+        })
+        return candidate
 
 
 class ResumeRetriever:

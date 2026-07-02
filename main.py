@@ -65,10 +65,109 @@ def _qdrant_available() -> bool:
         return False
 
 
+_AUTO_INGESTING = False
+
+
+def auto_ingest_existing_resumes(storage):
+    try:
+        for filepath in UPLOAD_FOLDER.iterdir():
+            if filepath.is_file() and allowed_file(filepath.name):
+                filename = secure_filename(filepath.name)
+                candidate_id_str = f"FILE_{Path(filename).stem.replace(' ', '_')}"
+                clean_id_str = candidate_id_str.replace("FILE_", "").replace("CAND_", "").replace("_", "")
+                try:
+                    cid = int(clean_id_str)
+                except ValueError:
+                    import hashlib
+                    h = hashlib.sha256(candidate_id_str.encode('utf-8')).hexdigest()
+                    cid = 1000000 + (int(h, 16) % 9000000)
+                
+                # Check if already present
+                if isinstance(storage, MockResumeRetriever):
+                    exists = any(r["id"] == cid for r in storage._candidates)
+                else:
+                    exists = False
+                    try:
+                        exists = storage.get_resume(cid) is not None
+                    except Exception:
+                        pass
+                
+                if not exists:
+                    # Run ingestion pipeline directly
+                    result = run_pipeline(
+                        input_path=str(filepath),
+                        output_path=None,
+                    )
+                    embeddings_path = Path(result["output_dir"]) / "embeddings.npy"
+                    candidate_ids_path = Path(result["output_dir"]) / "candidate_ids.npy"
+                    import numpy as np
+                    embeddings = np.load(embeddings_path)
+                    candidate_ids = np.load(candidate_ids_path, allow_pickle=True)
+                    
+                    # Extract text using dispatcher
+                    from services.resume_embedding.resume_embedding.app.input import dispatch
+                    extracted_texts = {}
+                    try:
+                        for candidate_id, text in dispatch(filepath, skip_invalid=True):
+                            extracted_texts[str(candidate_id)] = text
+                    except Exception:
+                        pass
+                        
+                    for i, cand_id in enumerate(candidate_ids):
+                        cand_id_str = str(cand_id)
+                        c_clean = cand_id_str.replace("FILE_", "").replace("CAND_", "").replace("_", "")
+                        try:
+                            c_cid = int(c_clean)
+                        except ValueError:
+                            import hashlib
+                            h_c = hashlib.sha256(cand_id_str.encode('utf-8')).hexdigest()
+                            c_cid = 1000000 + (int(h_c, 16) % 9000000)
+                            
+                        resume_text = extracted_texts.get(cand_id_str, f"Candidate {cand_id_str}")
+                        name = cand_id_str.replace("FILE_", "").replace("_", " ")
+                        
+                        # Skill extraction
+                        import re
+                        common_skills = [
+                            "Python", "FastAPI", "PyTorch", "ONNX", "Embeddings", "Pydantic", 
+                            "Qdrant", "Docker", "Golang", "Go", "FAISS", "OpenSearch", "Milvus", 
+                            "Weaviate", "Pinecone", "Elasticsearch", "Machine Learning", "ML", 
+                            "Search", "Ranking", "Retrieval", "NLP", "C++", "Java", "AWS", "GCP", 
+                            "Kubernetes", "SQL", "Git"
+                        ]
+                        matched_skills = []
+                        text_lower = resume_text.lower()
+                        for skill in common_skills:
+                            pattern = r'\b' + re.escape(skill.lower()) + r'\b'
+                            if re.search(pattern, text_lower):
+                                matched_skills.append(skill)
+                        skills_str = ", ".join(matched_skills[:5])
+                        
+                        storage.ingest_candidate({
+                            "candidate_id": c_cid,
+                            "name": name,
+                            "resume_text": resume_text,
+                            "skills": skills_str,
+                        })
+    except Exception as e:
+        print(f"[WARNING] Auto-ingestion failed: {e}")
+
+
 def get_retriever():
+    global _AUTO_INGESTING
     if _qdrant_available():
-        return ResumeRetriever()
-    return MockResumeRetriever()
+        storage = ResumeRetriever()
+    else:
+        storage = MockResumeRetriever()
+        
+    if not _AUTO_INGESTING:
+        _AUTO_INGESTING = True
+        try:
+            auto_ingest_existing_resumes(storage)
+        finally:
+            _AUTO_INGESTING = False
+            
+    return storage
 
 
 def get_reranker():
@@ -162,6 +261,15 @@ def run_ingestion_pipeline(input_path: Path):
     Feed resumes to run_pipeline → get embeddings → store in Qdrant.
     Returns list of candidate IDs that were stored.
     """
+    # Run the dispatcher on the input path to extract the actual texts
+    from services.resume_embedding.resume_embedding.app.input import dispatch
+    extracted_texts = {}
+    try:
+        for candidate_id, text in dispatch(input_path, skip_invalid=True):
+            extracted_texts[str(candidate_id)] = text
+    except Exception as e:
+        print(f"Error during text extraction: {e}")
+
     result = run_pipeline(
         input_path=str(input_path),
         output_path=None,
@@ -178,12 +286,41 @@ def run_ingestion_pipeline(input_path: Path):
     stored_ids = []
 
     for i, candidate_id in enumerate(candidate_ids):
-        cid = int(str(candidate_id).replace("FILE_", "").replace("CAND_", "").replace("_", ""))
+        candidate_id_str = str(candidate_id)
+        clean_id_str = candidate_id_str.replace("FILE_", "").replace("CAND_", "").replace("_", "")
+        try:
+            cid = int(clean_id_str)
+        except ValueError:
+            import hashlib
+            # Compute a deterministic 7-digit integer hash for non-numeric filenames
+            h = hashlib.sha256(candidate_id_str.encode('utf-8')).hexdigest()
+            cid = 1000000 + (int(h, 16) % 9000000)
+            
+        resume_text = extracted_texts.get(candidate_id_str, f"Candidate {candidate_id_str}")
+        name = candidate_id_str.replace("FILE_", "").replace("_", " ")
+        
+        # Simple skill extraction helper
+        import re
+        common_skills = [
+            "Python", "FastAPI", "PyTorch", "ONNX", "Embeddings", "Pydantic", 
+            "Qdrant", "Docker", "Golang", "Go", "FAISS", "OpenSearch", "Milvus", 
+            "Weaviate", "Pinecone", "Elasticsearch", "Machine Learning", "ML", 
+            "Search", "Ranking", "Retrieval", "NLP", "C++", "Java", "AWS", "GCP", 
+            "Kubernetes", "SQL", "Git"
+        ]
+        matched_skills = []
+        text_lower = resume_text.lower()
+        for skill in common_skills:
+            pattern = r'\b' + re.escape(skill.lower()) + r'\b'
+            if re.search(pattern, text_lower):
+                matched_skills.append(skill)
+        skills_str = ", ".join(matched_skills[:5])
+        
         storage.ingest_candidate({
             "candidate_id": cid,
-            "name": f"Candidate_{cid}",
-            "resume_text": f"Candidate {cid}",
-            "skills": "",
+            "name": name,
+            "resume_text": resume_text,
+            "skills": skills_str,
         })
         stored_ids.append(cid)
 
@@ -203,10 +340,11 @@ def run_ranking_pipeline(job_description: str, top_k: int = 10, cutoff_layer: in
     storage = get_retriever()
     ranker = get_reranker()
 
+    # Retrieve all/large candidate pool to avoid retrieval bottleneck
     if isinstance(storage, MockResumeRetriever):
-        retrieved = storage.search(job_description, top_k)
+        retrieved = storage.search(job_description, len(storage._candidates))
     else:
-        retrieved = storage.search(job_description, search_type="hybrid", top_k=top_k)
+        retrieved = storage.search(job_description, search_type="hybrid", top_k=max(top_k * 5, 100))
 
     normalized = []
     for c in retrieved:
@@ -224,7 +362,8 @@ def run_ranking_pipeline(job_description: str, top_k: int = 10, cutoff_layer: in
         cutoff_layer=cutoff_layer,
     )
 
-    return ranked
+    # Slice ranked list to requested top_k at the output layer
+    return ranked[:top_k]
 
 
 # ------------------------------------------------------------------
