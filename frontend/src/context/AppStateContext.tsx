@@ -25,9 +25,17 @@ Module Responsibilities
 Required Skills: Python, FastAPI, PyTorch, ONNX Runtime, Vector Embeddings, Pydantic, Qdrant, Docker
 Experience: 5+ years in ML Engineering or AI Infrastructure.`;
 
+const DEFAULT_UPLOADED_FILES = [
+  { name: "alice_johnson_resume.pdf", extension: ".pdf", sizeKb: 120 },
+  { name: "bob_smith_resume.pdf", extension: ".pdf", sizeKb: 95 },
+  { name: "carol_davis_resume.pdf", extension: ".pdf", sizeKb: 110 },
+  { name: "david_brown_resume.pdf", extension: ".pdf", sizeKb: 105 },
+  { name: "emma_wilson_resume.pdf", extension: ".pdf", sizeKb: 130 },
+];
+
 const INITIAL_STATE: AppState = {
   activePage: "dashboard",
-  uploadedFiles: [],
+  uploadedFiles: DEFAULT_UPLOADED_FILES,
   jobDescription: DEFAULT_JD,
   topCount: 3,
   searchQuery: "",
@@ -180,7 +188,7 @@ function appReducer(state: AppState, action: AppAction): AppState {
         ...INITIAL_STATE,
         templates: state.templates,
         historyRecords: state.historyRecords,
-        uploadedFiles: [],
+        uploadedFiles: DEFAULT_UPLOADED_FILES,
         jobDescription: DEFAULT_JD,
         analysisStatus: "idle",
         analysisSteps: INITIAL_ANALYSIS_STEPS,
